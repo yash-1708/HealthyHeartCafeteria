@@ -1,0 +1,94 @@
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `CheckUserName`(IN UserNm varchar(45), out userid int)
+Begin
+		declare uid int;
+		set uid =0;
+		Select  uid=idUserMaster from usermaster where UserName =UserNm;
+        
+		if uid>0 then
+		  set userid =uid;
+		else 
+		  set userid =0;
+		end if;
+End$$
+DELIMITER ;
+
+
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ChangePassword`(IN UserNm varchar(45), UserNewPwd varchar(45))
+Begin
+		Update usermaster
+        set Password = UserNewPwd
+        where UserName = UserNm;
+
+END$$
+DELIMITER ;
+
+
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetUserDetails`(IN UserN varchar(45),
+Passw varchar(45))
+BEGIN
+Select u.idUserTypeMaster,FirstName,LastName,UserTypeName from UserMaster u
+inner join UserTypeMaster t on u.idUserTypeMaster = t.idUserTypeMaster
+where u.UserName =UserN and u.Password =Passw;
+END$$
+DELIMITER ;
+
+
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `RegisterUser`(IN FirstNm varchar(45),MiddleNm varchar(45),LastNm varchar(45),
+Floor int, TableNo varchar(45),UserN varchar(45),Passw varchar(45))
+BEGIN
+Insert into usermaster (FirstName,MiddleName,LastName,FloorNumber, 
+TableNumber ,UserName ,Password, idUserTypeMaster)
+values (FirstNm ,MiddleNm ,LastNm ,Floor,TableNo ,UserN ,Passw,2);
+END$$
+DELIMITER ;
+
+
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `SaveOrder`(IN UserId int, DeliveryTable int,DeliveryFloor int, ProductId int, Qty int)
+Begin
+Declare ordid int;
+		Insert into ordertransaction(idUserMaster,OrderDate,DeliverToTable,DeliverToFloor,DeliveredStatus)
+        values (UserId,GetDate(),DeliveryTable,DeliveryFloor,false);
+        set ordid = @@Identity;
+        Insert into orderdetails(idOrderTransaction,idProductMaster,OrderQuantity,OrderPrice)
+        values(ordid,ProductId,Qty,(Select ProductPrice from ProductMaster where idProductMaster =ProductId));
+
+END$$
+DELIMITER ;
+
+
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `SavePayment`(IN UserId int, Amount decimal(10,0),Remarks varchar(200))
+Begin
+		Insert into paymentransaction(idUserMaster,Amount,PaymentDate,PaymentTransactionRemarks)
+        values (UserId,Amount,GetDate(),Remarks);
+
+END$$
+DELIMITER ;
+
+
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `SaveProduct`(IN ProductNm varchar(45), ProductPric decimal(10,0))
+BEGIN
+insert into ProductMaster(ProductName,ProductPrice,IsActive)
+values (ProductNm,ProductPric,1);
+END$$
+DELIMITER ;
+
+
+
+************************************************************************************************************************
+CREATE DEFINER=`root`@`localhost` TRIGGER `productmaster_AFTER_INSERT` AFTER INSERT ON `productmaster` FOR EACH ROW BEGIN
+INSERT INTO todaysmenu(idProductMaster,MenuDate)
+VALUES(NEW.idProductMaster, NOW());
+END
